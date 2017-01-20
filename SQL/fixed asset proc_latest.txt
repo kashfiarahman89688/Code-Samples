@@ -1,0 +1,171 @@
+CREATE OR REPLACE PROCEDURE Rpt_Fixed_Asset_Schd_Details (
+St_Cursor OUT SYS_REFCURSOR,
+vBRAN IN VARCHAR2,
+vStartMon IN VARCHAR2,
+vStartYear IN VARCHAR2,
+vEndtMon IN VARCHAR2,
+vEndYear IN VARCHAR2)
+AS
+vStartDt VARCHAR(8) := CONCAT(CONCAT(vStartYear,vStartMon ),'01');
+vEndDt VARCHAR(8) :=TO_CHAR(LAST_DAY(TO_DATE(CONCAT(CONCAT(vEndYear,vEndtMon ),'01'),'yyyyMMdd')),'yyyyMMdd');
+BEGIN
+OPEN St_Cursor FOR
+SELECT
+CONCAT(CONCAT(vStartYear,vStartMon ),'01') start_date,
+TO_CHAR(LAST_DAY(TO_DATE(CONCAT(CONCAT(vEndYear,vEndtMon ),'01'),'yyyyMMdd')),'yyyyMMdd') end_date,
+h.gl,h.name,
+(SELECT AVG(depr_rate) FROM fammast WHERE gl_code = h.gl) depr_rate,
+(SELECT today_bis_date FROM cobisdt)bis_date,
+NVL((SELECT name FROM combrch WHERE brn=h.brn),'ALL BRANCH')report_name,
+TO_CHAR(NVL(begining_cost_price,0)) begining_cost_price,
+TO_CHAR(NVL(during_cost_price_new,0)) during_cost_price_new,
+TO_CHAR(NVL(during_cost_price_transfer,0)) during_cost_price_transfer,
+TO_CHAR(NVL(transfer_during_year,0)) transfer_during_year,
+TO_CHAR(NVL(sale_during_year,0)) sale_during_year,
+TO_CHAR( NVL(begining_depc_price,0)) begining_depc_price,
+TO_CHAR(NVL(during_depc_price_new,0))  during_depc_price_new,
+TO_CHAR(NVL(during_depc_price_transfer,0))  during_depc_price_transfer,
+TO_CHAR(NVL(depc_transfer_during_year,0)) depc_transfer_during_year,
+TO_CHAR(NVL(depc_sale_during_year,0)) depc_sale_during_year,
+h.brn,
+vStartDt,
+vEndDt
+ FROM
+(
+SELECT SUM(beg_cost_price)begining_cost_price,gl_code,brn FROM
+(
+SELECT NVL(get_amt,0) beg_cost_price,gl_code,brn FROM fatmast a
+WHERE eom_date = TO_CHAR(LAST_DAY(TO_DATE(vStartDt,'yyyyMMdd')),'yyyyMMdd') -- date is changed to eom of  vstart date
+AND ent_date < vStartDt
+AND brn = COALESCE(vBran,a.brn)
+AND sta IN ('10','39','90') -- need to remove 40,90 at production
+) GROUP BY gl_code,brn
+) a,
+(
+SELECT SUM(during_cost_price) during_cost_price_new,gl_code,brn FROM
+(
+SELECT NVL(get_amt,0)during_cost_price, gl_code,brn,get_type  FROM fatmast  a
+WHERE eom_date = vEndDt
+AND brn = COALESCE(vBran,a.brn)
+AND sta IN ('10','39','90','99','40')
+AND get_type <> '5'
+AND get_date BETWEEN vStartDt AND vEndDt
+ )
+ GROUP BY gl_code,brn
+ ) b,
+ (
+SELECT SUM(during_cost_price) during_cost_price_transfer,gl_code,brn FROM
+(
+SELECT NVL(get_amt,0)during_cost_price, gl_code,brn,get_type  FROM fatmast  a
+WHERE eom_date = vEndDt
+AND brn = COALESCE(vBran,a.brn)
+AND sta IN ('10','39','90','99','40')
+AND get_type = '5'
+ AND ent_date BETWEEN vStartDt AND vEndDt
+ )
+ GROUP BY gl_code,brn
+ ) b1,
+(
+SELECT SUM(trans_during_price) transfer_during_year,gl_code,brn FROM (
+SELECT NVL(get_amt,0) trans_during_price,bank_ref_no,gl_code,brn FROM fammast
+WHERE
+bank_ref_no IN
+(SELECT bank_ref_no FROM fathist a
+WHERE
+(tx_sta IN ('90') AND tx_kind IN ('20'))
+AND tx_brn = COALESCE(vBran,a.tx_brn)
+AND tx_date BETWEEN vStartDt AND vEndDt)
+)
+GROUP BY gl_code,brn
+) c,
+(
+SELECT SUM(trans_during_price) sale_during_year,gl_code,brn FROM
+(
+SELECT NVL(get_amt,0) trans_during_price,bank_ref_no,gl_code,brn FROM fammast
+WHERE
+bank_ref_no IN
+(SELECT bank_ref_no FROM fathist a
+WHERE
+(tx_sta IN ('40') AND tx_kind IN ('10'))
+AND tx_brn = COALESCE(vBran,a.tx_brn)
+AND tx_date BETWEEN vStartDt AND vEndDt
+))
+GROUP BY gl_code,brn
+) c1,
+(
+SELECT SUM(dep_price) begining_depc_price , gl_code,brn FROM
+(SELECT depr_amt-depr_year_amt-depr_add_amt  dep_price,gl_code,brn FROM fatmast a
+WHERE eom_date = TO_CHAR(LAST_DAY(TO_DATE(vStartDt,'yyyyMMdd')),'yyyyMMdd') -- date is changed to eom of  vstart date
+AND brn = COALESCE(vBran,a.brn)
+AND ent_DAte < vStartDt
+AND sta IN ('10','39','90')) GROUP BY gl_code,brn -- need to remove 40,90 at production
+)d,
+(
+SELECT SUM(during_depc_price) during_depc_price_new ,gl_code,brn FROM
+(SELECT depr_year_amt+depr_add_amt during_depc_price , gl_code,brn FROM fatmast a WHERE eom_date = vEndDt
+AND brn = COALESCE(vBran,a.brn)
+AND (sta IN ('10','39','90') OR (sta IN ('40','99') AND get_date BETWEEN vStartDt AND vEndDt ))
+--AND get_date BETWEEN vStartDt AND vEndDt
+) GROUP BY gl_code,brn
+) f,
+(
+SELECT SUM(during_depc_price) during_depc_price_transfer ,gl_code,brn FROM
+(
+SELECT depr_amt-(depr_year_amt+depr_add_amt) during_depc_price , gl_code,brn FROM fatmast a WHERE eom_date = vEndDt
+AND brn = COALESCE(vBran,a.brn)
+AND get_type = '5'
+AND sta IN ('10','39','90','40','99') AND ent_date BETWEEN vStartDt AND vEndDt 
+) GROUP BY gl_code,brn
+) f1,
+(
+SELECT SUM(depr_amt) depc_transfer_during_year,gl_code,brn FROM
+(SELECT depr_amt-(depr_year_amt+depr_add_amt) depr_amt,gl_code,brn FROM fammast  a WHERE bank_ref_no IN (SELECT bank_ref_no FROM fathist a
+WHERE
+(tx_sta IN ('90')  AND tx_kind IN ('20'))
+AND tx_date
+BETWEEN vStartDt AND vEndDt
+AND tx_brn = COALESCE(vBran,a.tx_brn))) GROUP BY gl_code,brn
+)g,
+(
+SELECT SUM(depr_amt) depc_sale_during_year,gl_code,brn FROM
+(SELECT depr_amt,gl_code,brn FROM fammast  a WHERE bank_ref_no IN (SELECT bank_ref_no FROM fathist a
+WHERE
+(tx_sta IN ('40') AND tx_kind IN ('10'))
+AND tx_date
+BETWEEN vStartDt AND vEndDt
+AND tx_brn = COALESCE(vBran,a.tx_brn))) GROUP BY gl_code,brn
+)g1,
+(
+SELECT gl,long_name name,brn FROM glmglcd a,((SELECT brn FROM combrch WHERE brn NOT IN ('999999','000999'))) b WHERE gl IN (
+'31711110',
+'31911110',
+'32111110',
+'32311110',
+'32313110',
+'32511110'
+)
+) h
+WHERE a.gl_code(+) = h.gl
+AND a.brn (+) = h.brn
+AND b.gl_code(+) = h.gl
+AND b.brn (+) = h.brn
+AND c.gl_code(+) = h.gl
+AND c.brn (+) = h.brn
+AND d.gl_code(+) = h.gl
+AND d.brn (+) = h.brn
+AND f.gl_code(+) = h.gl
+AND f.brn (+) = h.brn
+AND g.gl_code(+) = h.gl
+AND g.brn (+) = h.brn
+ AND b1.gl_code(+) = h.gl
+AND b1.brn (+) = h.brn
+AND  c1.gl_code(+) = h.gl
+AND c1.brn (+) = h.brn
+AND  f1.gl_code(+) = h.gl
+AND f1.brn (+) = h.brn
+AND  g1.gl_code(+) = h.gl
+AND g1.brn (+) = h.brn
+AND h.brn = COALESCE(vBran,h.brn)
+;
+END Rpt_Fixed_Asset_Schd_Details;
+/

@@ -1,0 +1,259 @@
+body{
+	background-image: url("http://www.idesignarch.com/wp-content/uploads/The-Brando-Tetiaroa_1.jpg");
+	font-family: Arial, Verdana;
+}
+
+#mainbgborder{
+    border: 10px ridge blue;
+    width: 90%;
+    margin:auto;
+    margin-top: 30px;
+  
+}
+
+#innerpanel{
+	background-image: url("http://www.hindustantimes.com/Images/popup/2014/12/1812brunchpg21a.jpg");
+	background-repeat: no-repeat;
+	border: 10px ridge white;
+	margin: 50px;
+	background-size: 100% 100%;	
+}
+
+header h1{
+	position: relative;
+    left: -1em;
+    top: -1.5em;
+    background-image: linear-gradient(to right, skyblue 0%,darkblue 100%);
+  	background-blend-mode: color-dodge;
+    text-align: center;
+    width: 300px;
+    font-family: Courier;
+
+}
+#header1{
+	font-family: Courier;
+	color:red;
+}
+
+#header2{
+	font-family: Verdana;
+	color:blue;
+}
+
+#header3{
+	font-family: Comic;
+	color:green;
+}
+
+nav ul{
+	list-style: none;
+	text-align: center;
+
+}
+
+nav li{
+
+	padding: 10px;
+	display: inline-block;
+	background-color: white;
+  	color: darkblue;
+  	font-size: 20px;
+  	margin-left: 30px; 
+}
+
+a {
+	padding: 10px;
+	text-decoration:none; 
+    color:darkblue; 
+    font-family: Arial, Verdana;
+}
+
+a:focus, a:hover {
+	background: skyblue;
+    color:red;
+}
+
+#section1{
+	margin: 0 20px;
+	font-family: Arial;
+	font-size: 1.5em;
+	font-weight: bold;
+	color: brown;
+	background-color: #FAD7A0;
+	text-align: center;
+	padding: 20px;
+}
+
+#item1{
+	border: 2px solid brown;
+    margin: 20px;
+    width: 500px;
+    height: 250px;
+
+}
+
+#item1 img{
+	float: right;
+	margin: 20px;
+	border: 4px ridge skyblue;
+
+}
+
+#boxleft1heading{
+	
+	float: left;
+	color:red;
+}
+
+#boxleft1{
+	float: left;
+	width: 200px;
+	padding: 10px;
+}
+
+#boxleft1contentpart1{
+	float:left;
+	font-family: Verdana;
+	color:white;
+	
+}
+
+#boxleft1span{
+	font-weight: bold;
+	color:orange;
+}
+
+#item2{
+	border: 2px white;
+	border-style: dotted;
+    margin: 20px;
+    width: 500px;
+    height: 250px;
+}
+
+#item2 img{
+	float: left;
+	margin: 20px;
+	border: 4px ridge cyan;
+
+}
+
+#boxright2heading{
+	
+	float: left;
+	color:red;
+}
+
+#boxcenter2{
+	float: right;
+	width: 200px;
+	padding: 10px;
+	text-align: left;
+	font-style: oblique;
+	
+}
+
+#boxright2contentpart1{
+	float:right;
+	font-family: Verdana;
+	color:white;
+	font-style: oblique
+	
+	
+	
+}
+
+#boxright2span{
+	font-weight: normal;
+	color:orange;
+	font-style: italic;
+	font-family: Arial;
+	
+}
+
+
+#item3{
+	border: 2px solid brown;
+    margin: 10px;
+    width: 500px;
+    height: 280px;
+
+}
+
+#item3 img{
+	float: left;
+	margin: 20px;
+	border: 4px ridge skyblue;
+
+}
+
+#boxleft3heading{
+	
+	
+	color:red;
+	text-align: left
+}
+
+#boxleft3{
+	float: right;
+	width: 200px;
+	padding: 10px;
+	font-style: oblique;
+	font-family: courier;
+	text-align: left;
+}
+
+#boxleft3contentpart1{
+	float:right;
+	font-style: oblique;
+	color:white;
+	font-family: courier;
+
+	
+}
+
+#boxleft3span{
+	font-weight: bold;
+	color:orange;
+	font-style: oblique;
+}
+
+footer{
+	font-size: large;
+	font-weight: bold;
+	text-align: center;
+}
+
+#island{
+	background-image: url("https://taj.tajhotels.com/content/dam/luxury/hotels/Taj-Exotica-Maldives/images/4x3/AerialShotIV4x3,.jpg");
+	border: 3px ridge blue;
+	font-family: verdana;
+	color:pink;
+	height: 300px;
+	width: 500px;
+	background-size: 100% 100%;
+	margin: 30px;
+	font-weight: bold;
+	text-align: left;
+	padding: 30px;
+}
+
+#island h3{
+	color: blue;
+	text-align: center;
+}
+
+dt {
+        font-weight: bolder;
+        color: magenta;
+        font-style: italic;
+
+    }
+dd {
+        font-style: oblique;
+    }
+
+
+
+
+

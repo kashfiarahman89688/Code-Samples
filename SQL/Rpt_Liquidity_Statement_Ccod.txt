@@ -1,0 +1,80 @@
+CREATE OR REPLACE PROCEDURE KASTLEREP.Rpt_Liquidity_Statement_Ccod (
+LS_Cursor OUT SYS_REFCURSOR,
+vBran IN VARCHAR2,
+vMonth IN VARCHAR2,
+vYear IN VARCHAR2)
+AS
+vTx_date VARCHAR2(8) := TO_CHAR(LAST_DAY(TO_DATE(CONCAT(CONCAT(trim(vYear),trim(vMonth)),'01'),'yyyymmdd')),'yyyymmdd');
+BEGIN
+OPEN LS_Cursor FOR
+SELECT (SELECT today_bis_date FROM COBISDT) BIS_DATE,
+(SELECT long_name FROM glmglcd WHERE gl = cc.loan_gl_code) AS gl_name,
+aa.*,
+cc.acct,
+bb.tx_date,
+TO_CHAR(CASE WHEN  (SELECT int_calc_type FROM lnpgrop WHERE grp =(SELECT hous_over_grp FROM ccygrop WHERE grp=cc.grp)) = 's' THEN bb.bal+bb.due_chrg
+ELSE bb.bal+bb.due_chrg+bb.due_int END) AS bal,
+NVL(TO_CHAR(ROUND((TO_DATE(cc.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)),'0') AS diff,
+cc.ilb_end_date AS exp_date,
+TO_CHAR(bb.curt_rate) AS int_rate,
+TO_CHAR(bb.sta) AS sta,
+(SELECT Code_Name FROM LNPOTCD WHERE bank_code = '999' AND LANG_CODE = 'EN'
+AND code_kind = '52' AND code_5 = bb.STA) AS Status_name FROM
+(
+SELECT TO_CHAR(SUM(a.finalbal)) AS sumbal,a.loan_gl_code,a.diff_month FROM
+(SELECT
+a.acct,
+(SELECT int_calc_type FROM lnpgrop WHERE grp =(SELECT hous_over_grp FROM ccygrop WHERE grp=b.grp)) AS int_calc_type,
+(CASE WHEN  (SELECT int_calc_type FROM lnpgrop WHERE grp =(SELECT hous_over_grp FROM ccygrop WHERE grp=b.grp)) = 's' THEN a.bal+a.due_chrg
+ELSE a.bal+a.due_chrg+a.due_int END) AS finalbal,
+b.loan_gl_code,
+b.ilb_end_date,
+NVL(TO_CHAR(ROUND((TO_DATE(a.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)),'0') AS diff,
+(CASE WHEN ROUND((TO_DATE(a.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=1 THEN '0-1'
+WHEN ROUND((TO_DATE(a.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=2 THEN '1-2'
+WHEN ROUND((TO_DATE(a.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=3 THEN '2-3'
+WHEN ROUND((TO_DATE(a.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=6 THEN '3-6'
+WHEN ROUND((TO_DATE(a.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=12 THEN '6-12'
+WHEN ROUND((TO_DATE(a.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=36 THEN '12-36'
+WHEN ROUND((TO_DATE(a.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=60 THEN '36-60'
+WHEN ROUND((TO_DATE(a.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=84 THEN '60-84'
+WHEN ROUND((TO_DATE(a.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=120 THEN '84-120'
+WHEN ROUND((TO_DATE(a.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)>120 THEN '121'
+ELSE '0-1' END) AS diff_month
+FROM lntloan a,dpmloan b
+WHERE b.brn = COALESCE(vBran,b.brn)
+AND a.tx_date = vTx_date
+AND a.acct = b.acct
+AND b.loan_gl_code IN
+(SELECT bs1_code FROM (SELECT DISTINCT bs1_code,ccy  FROM lnpcgrp WHERE grp < '90000000000' AND
+ grp IN (SELECT hous_over_grp FROM dppgrop a,ccygrop b
+WHERE a.grp=b.grp
+AND a.od_flg='y'))
+)
+AND a.bal<0
+AND ((a.STA IN ('00','07','30','31','32','33')) OR ((SELECT cls_date FROM dpmacct WHERE acct = b.acct) > vTx_date))
+) a
+GROUP BY a.loan_gl_code,a.diff_month
+) aa,lntloan bb,dpmloan cc
+WHERE bb.acct = cc.acct
+AND aa.loan_gl_code = cc.loan_gl_code
+AND (CASE WHEN cc.loan_gl_code = '23157111' THEN bal ELSE -1 END)<0
+AND (CASE WHEN ROUND((TO_DATE(cc.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=1 THEN '0-1'
+WHEN ROUND((TO_DATE(cc.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=2 THEN '1-2'
+WHEN ROUND((TO_DATE(cc.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=3 THEN '2-3'
+WHEN ROUND((TO_DATE(cc.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=6 THEN '3-6'
+WHEN ROUND((TO_DATE(cc.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=12 THEN '6-12'
+WHEN ROUND((TO_DATE(cc.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=36 THEN '12-36'
+WHEN ROUND((TO_DATE(cc.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=60 THEN '36-60'
+WHEN ROUND((TO_DATE(cc.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=84 THEN '60-84'
+WHEN ROUND((TO_DATE(cc.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)<=120 THEN '84-120'
+WHEN ROUND((TO_DATE(cc.ilb_end_date,'YYYYMMDD')-TO_DATE(vTx_date,'YYYYMMDD'))/30)>120 THEN '121'
+ELSE '0-1' END) = aa.diff_month
+AND (CASE WHEN  (SELECT int_calc_type FROM lnpgrop WHERE grp =(SELECT hous_over_grp FROM ccygrop WHERE grp=cc.grp)) = 's' THEN bb.bal+bb.due_chrg
+ELSE bb.bal+bb.due_chrg+bb.due_int END) <0
+AND cc.brn = COALESCE(vBran,cc.brn)
+AND bb.tx_date = vTx_date
+AND bb.STA IN ('00','07','30','31','32','33')
+ORDER BY acct;
+END Rpt_Liquidity_Statement_Ccod;
+/
